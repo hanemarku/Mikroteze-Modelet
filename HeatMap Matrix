@@ -1,0 +1,91 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import logging
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
+from imblearn.over_sampling import SMOTE
+from sklearn.pipeline import Pipeline
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
+
+
+columns = ["Mosha", "Gjinia", "Lloji i dhimbjes së Kraharorit", "Tensioni në pushim", 
+              "Kolesteroli në gjak", "Sheqeri në gjak (Fasting)", 
+              "Rezultatet elektrokardiografike", "Rrahjet maksimale të zemrës", 
+              "Angina e shkaktuar nga ushtrimet", "Oldpeak - ST", 
+              "Shkalla (Slope)", "Numri i enëve kryesore", "Lloji i defektit (Thal)", "Target"]
+data_path = 'pacientet.csv'
+logger.info("Loading dataset from %s", data_path)
+
+df = pd.read_csv(data_path, header=None, names=columns)
+
+target_mapping = {
+    1: 'Stemi inferior',
+    2: 'Dilatacioni aneurizmatik i aortës ascendente',
+    3: 'Bllok i plotë antriventrikular',
+    4: 'Anginë e paqendrueshme',
+    5: 'Sëmundje akute koronare (SAK)',
+    6: 'Infarkt akut i miokardit'
+}
+
+df['Sëmundja'] = df['Target'].map(target_mapping)
+
+disease_stats = df.groupby('Sëmundja').agg(
+    numri_pacienteve=('Sëmundja', 'size'),     
+    mosha_mesatare=('Mosha', 'mean')         
+).reset_index()
+
+print(disease_stats)
+
+
+numeric_df = df.select_dtypes(include=[np.number])
+
+summary_stats = numeric_df.describe()
+correlation_matrix = numeric_df.corr()
+
+print("Summary Statistics:\n", summary_stats)
+print("\nCorrelation Matrix:\n", correlation_matrix)
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(16, 12))  
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5, fmt='.2f', annot_kws={"size": 10})
+
+plt.xticks(rotation=45, ha='right') 
+plt.yticks(rotation=0)
+
+plt.title('Matrica e korrelacionit HeatMap per datasetin e pacientëve') 
+plt.tight_layout()  
+plt.show()
+
+
+sns.set(style="whitegrid")
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='Age', y='Max heart rate', data=df)
+plt.title('Age vs Max Heart Rate')
+plt.xlabel('Age')
+plt.ylabel('Max Heart Rate')
+plt.show()
+
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Target', y='Max heart rate', data=df)
+plt.title('Max Heart Rate vs Heart Disease (Target)')
+plt.xlabel('Heart Disease (Target)')
+plt.ylabel('Max Heart Rate')
+plt.show()
+
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Target', y='Slope', data=df)
+plt.title('Slope vs Heart Disease (Target)')
+plt.xlabel('Heart Disease (Target)')
+plt.ylabel('Slope')
+plt.show()
+
